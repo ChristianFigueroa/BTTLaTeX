@@ -1,47 +1,42 @@
-// 0 = sans-serif, upright (normal font)   abcxyz => abcxyz
-// 1 = sans-serif, italicized              abcxyz => 𝘢𝘣𝘤𝘹𝘺𝘻
-// 2 = serif, italicized (TeX default)     abcxyz => 𝑎𝑏𝑐𝑥𝑦𝑧
-const mathlevel = 0;
 const custom_macros = {
 	// Define plain replacement strings
 	R: `\\mathbb{R}`,
 	N: `\\mathbb{N}`,
 	Z: `\\mathbb{Z}`,
 	C: `\\mathbb{C}`,
-	// Or define functions
-	// \macrothatmultiplies#1#2 -> [the product of its two arguments]
-	macrothatmultiplies: function(param1, param2) {
+	// Or define functions that can include JS code
+	macroThatMultiplies: function(param1, param2) {
 		return `${param1} \\times ${param2} = ${param1 * param2}`;
 	},
 	// Macros that return null/undefined, or throw an error, will not expand.
 	// Return the empty string "" if you actually want it to expand to nothing.
-	macrothatfails: function() {
+	macroThatFails: function() {
 		// throw new Error();
 		// or
 		// return null;
 		// or
 		// return;
 	},
-	// Functions will absorb as many arguments as there are in the functino signature (excluding optional arguments)
+	// Functions will absorb as many arguments as there are in the function signature (excluding optional arguments)
 	// This function absorbs 11 arguments (p12 and p13 don't count)
 	// Functions can also absorb more than the standard 9 argument limit from TeX.
-	macrowithtoomanyargs: function(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12=12, p13=13) {
+	macroWithABunchOfArgs: function(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12=12, p13=13) {
 		return `Idk,\\ whatever\\ you\\ want`;
 	},
-	Alpha: `\\textrm{A}`,
-	Beta: `\\textrm{B}`,
-	Epsilon: `\\textrm{E}`,
-	Zeta: `\\textrm{Z}`,
-	Eta: `\\textrm{H}`,
-	Iota: `\\textrm{I}`,
-	Kappa: `\\textrm{K}`,
-	Mu: `\\textrm{M}`,
-	Nu: `\\textrm{N}`,
-	Omicron: `\\textrm{O}`,
-	omicron: `\\textrm{o}`,
-	Rho: `\\textrm{P}`,
-	Tau: `\\textrm{T}`,
-	Chi: `\\textrm{X}`
+	Alpha: `\\mathrm{A}`,
+	Beta: `\\mathrm{B}`,
+	Epsilon: `\\mathrm{E}`,
+	Zeta: `\\mathrm{Z}`,
+	Eta: `\\mathrm{H}`,
+	Iota: `\\mathrm{I}`,
+	Kappa: `\\mathrm{K}`,
+	Mu: `\\mathrm{M}`,
+	Nu: `\\mathrm{N}`,
+	Omicron: `\\mathrm{O}`,
+	omicron: `\\mathrm{o}`,
+	Rho: `\\mathrm{P}`,
+	Tau: `\\mathrm{T}`,
+	Chi: `\\mathrm{X}`
 };
 
 (async () => {
@@ -73,7 +68,7 @@ const custom_macros = {
 						}
 					}.bind(custom_macros[macro])}
 				} else {
-					macros[macro] = {type: "text", value: custom_macros[macro]};
+					macros[macro] = {type: "text", value: custom_macros[macro].toString()};
 				}
 			}
 		}
@@ -101,7 +96,8 @@ const reg = {
 	supscr: /\^/,
 	subscr: /_/,
 	digit: /\d/,
-	macro: /^\\([^A-Za-z]|[A-Za-z]+)/
+	macro: /^\\([^A-Za-z]|[A-Za-z]+)/,
+	macrowithat: /^\\([^A-Za-z@]|[@A-Za-z]+)/
 };
 
 const tok = {
@@ -156,165 +152,6 @@ function getArg(str, i = 0) {
 
 function addCodePoint(offset, str, i = 0) {
 	return String.fromCodePoint(offset + str.codePointAt(i));
-}
-
-function superscripted(str) {
-	let supertext = "";
-	for (let i = 0; i < str.length; i++) {
-		switch (str[i]) {
-			case "0":
-			case "4":
-			case "5":
-			case "6":
-			case "7":
-			case "8":
-			case "9":
-				supertext += addCodePoint(0x2040, str, i);
-				break;
-			case "1":
-				supertext += "\u00b9";
-				break;
-			case "2":
-				supertext += "\u00b2";
-				break;
-			case "3":
-				supertext += "\u00b3";
-				break;
-			case "+":
-				supertext += "\u207a";
-				break;
-			case "-":
-			case "\u2013":
-				supertext += "\u207b";
-				break;
-			case "=":
-				supertext += "\u207c";
-				break;
-			case "(":
-			case ")":
-				supertext += addCodePoint(0x2055, str, i);
-				break;
-			case "i":
-				supertext += "\u2071";
-				break;
-			case "n":
-				supertext += "\u207f";
-				break;
-			case "\\":
-				let match = str.substr(i).match(reg.macro);
-				if (match && match[1]) {
-					switch (match[1]) {
-						case "circ":
-							supertext += "\u00b0";
-							i += 4;
-							break;
-						case "prime":
-							supertext += "'";
-							i += 5;
-							break;
-						case "top":
-							supertext += "\u1d40";
-							i += 3;
-							break;
-						case " ":
-							supertext += "\u2006";
-							i += 1;
-							break;
-						default:
-							supertext += str[i];
-							break;
-					}	
-				} else {
-					supertext += str[i];
-				}
-				break;
-			default:
-				supertext += str[i];
-				break;
-		}
-	}
-	return supertext;
-}
-
-function subscripted(str) {
-	let subtext = "";
-	for (let i = 0; i < str.length; i++) {
-		switch (str[i]) {
-			case "0":
-			case "1":
-			case "2":
-			case "3":
-			case "4":
-			case "5":
-			case "6":
-			case "7":
-			case "8":
-			case "9":
-				subtext += addCodePoint(0x2050, str, i);
-				break;
-			case "+":
-				subtext += "\u208a";
-				break;
-			case "-":
-			case "\u2013":
-				subtext += "\u208b";
-				break;
-			case "=":
-				subtext += "\u208c";
-				break;
-			case "(":
-			case ")":
-				subtext += addCodePoint(0x2065, str, i);
-				break;
-			case "i":
-				subtext += "\u1d62";
-				break;
-			case "r":
-				subtext += "\u1d63";
-				break;
-			case "u":
-				subtext += "\u1d64";
-				break;
-			case "v":
-				subtext += "\u1d65";
-				break;
-			case "a":
-				subtext += "\u2090";
-				break;
-			case "e":
-				subtext += "\u2091";
-				break
-			case "o":
-				subtext += "\u2092";
-				break;
-			case "x":
-				subtext += "\u2093";
-				break;
-			case "j":
-				subtext += "\u2c7c";
-				break;
-			case "\\":
-				let match = str.substr(i).match(reg.macro);
-				if (match && match[1]) {
-					switch (match[1]) {
-						case " ":
-							subtext += "\u2006";
-							i += 1;
-							break;
-						default:
-							subtext += str[i];
-							break;
-					}	
-				} else {
-					subtext += str[i];
-				}
-				break;
-			default:
-				subtext += str[i];
-				break;
-		}
-	}
-	return subtext;
 }
 
 function unwrap(str) {
@@ -628,7 +465,7 @@ let macros = {
 	Xi: {type: "token", value: tok.ord("\u039e")},
 	xi: {type: "token", value: tok.ord("\u03be")},
 	zeta: {type: "token", value: tok.ord("\u03b6")},
-	" ": {type: "token", value: tok.ord(" ")},
+	" ": {type: "token", value: tok.ord("\u00a0")},
 	"#": {type: "token", value: tok.ord("#")},
 	"$": {type: "token", value: tok.ord("$")},
 	"%": {type: "token", value: tok.ord("%")},
@@ -642,13 +479,154 @@ let macros = {
 	"{": {type: "token", value: tok.ord("{")},
 	"}": {type: "token", value: tok.ord("}")},
 	"~": {type: "token", value: tok.ord("~")},
+	// Special macros that aren't callable directly by the user (since macros can't have "@" in them)
+	"d@superscript": {type: "func", args: 1, preparse: true, value: function(p1) {
+		let supertext = "";
+		for (const char of p1) {
+			const plain = plainChar(char);
+			switch (plain) {
+				case "0":
+				case "4":
+				case "5":
+				case "6":
+				case "7":
+				case "8":
+				case "9":
+					supertext += addCodePoint(0x2040, plain);
+					break;
+				case "1":
+					supertext += "\u00b9";
+					break;
+				case "2":
+					supertext += "\u00b2";
+					break;
+				case "3":
+					supertext += "\u00b3";
+					break;
+				case "+":
+					supertext += "\u207a";
+					break;
+				case "-":
+				case "\u2013":
+				case "\u2212":
+					supertext += "\u207b";
+					break;
+				case "=":
+					supertext += "\u207c";
+					break;
+				case "(":
+				case ")":
+					supertext += addCodePoint(0x2055, plain);
+					break;
+				case "i":
+					supertext += "\u2071";
+					break;
+				case "n":
+					supertext += "\u207f";
+					break;
+				case "\u26ac": // \circ
+					supertext += "\u00b0"
+					break;
+				case "\u2032": // \prime
+					supertext += "'";
+					break;
+				case "\u22a4": // \top
+					supertext += "\u1d40";
+					break;
+				case "\u00a0": // no-break space
+					supertext += "\u2006";
+					break;
+				case "\u2005":
+				case "\u2006":
+					break;
+				default:
+					supertext += char;
+					break;
+			}
+		}
+		return {type: "token", value: tok.script(supertext)};
+	}},
+	"d@subscript": {type: "func", args: 1, preparse: true, value: function(p1) {
+		let subtext = "";
+		for (const char of p1) {
+			const plain = plainChar(char);
+			switch (plain) {
+				case "0":
+				case "1":
+				case "2":
+				case "3":
+				case "4":
+				case "5":
+				case "6":
+				case "7":
+				case "8":
+				case "9":
+					subtext += addCodePoint(0x2050, plain);
+					break;
+				case "+":
+					subtext += "\u208a";
+					break;
+				case "-":
+				case "\u2013":
+				case "\u2212":
+					subtext += "\u208b";
+					break;
+				case "=":
+					subtext += "\u208c";
+					break;
+				case "(":
+				case ")":
+					subtext += addCodePoint(0x2065, plain);
+					break;
+				case "i":
+					subtext += "\u1d62";
+					break;
+				case "r":
+					subtext += "\u1d63";
+					break;
+				case "u":
+					subtext += "\u1d64";
+					break;
+				case "v":
+					subtext += "\u1d65";
+					break;
+				case "a":
+					subtext += "\u2090";
+					break;
+				case "e":
+					subtext += "\u2091";
+					break
+				case "o":
+					subtext += "\u2092";
+					break;
+				case "x":
+					subtext += "\u2093";
+					break;
+				case "j":
+					subtext += "\u2c7c";
+					break;
+				case "\u00a0":
+					subtext += "\u2006";
+					break;
+				case "\u2005":
+				case "\u2006":
+					break;
+				default:
+					subtext += char;
+					break;
+			}
+		}
+		return {type: "token", value: tok.script(subtext)};
+	}}
 };
 
 function asLaTeX(str) {
 	let toks = [];
+	let atAllowed = false;
 	while (str) {
 		if (str[0] == "\\") {
-			let match = str.match(reg.macro);
+			let match = str.match(atAllowed ? reg.macrowithat : reg.macro);
+			atAllowed = false;
 			if (match && match[1]) {
 				let name = match[1];
 				let macro = macros[name];
@@ -712,15 +690,12 @@ function asLaTeX(str) {
 			}
 			str = str.substr(1);
 		} else if (reg.supscr.test(str[0])) {
-			let argIndex = getArg(str, 1);
-			let text = superscripted(unwrap(str.substring(1, argIndex)));
-			toks.push(tok.script(text));
-			str = str.substr(argIndex);
+			str = "\\d@superscript " + str.substr(1);
+			atAllowed = true;
+			returnToBTT(str)
 		} else if (reg.subscr.test(str[0])) {
-			let argIndex = getArg(str, 1);
-			let text = subscripted(unwrap(str.substring(1, argIndex)));
-			toks.push(tok.script(text));
-			str = str.substr(argIndex);
+			str = "\\d@subscript " + str.substr(1);
+			atAllowed = true;
 		} else {
 			if (!reg.whitespace.test(str[0])) {
 				toks.push(tok.lookup(str[0]));
